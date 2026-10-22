@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Privacy Policy | Second Brain Graph</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <style>
+    :root { color-scheme: dark; font: 16px/1.65 "Segoe UI", Arial, sans-serif; background: #0b1220; color: #dbe4ef; }
+    * { box-sizing: border-box; }
+    body { max-width: 860px; margin: 0 auto; padding: 32px 22px 72px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #283548; }
+    a { color: #93c5fd; }
+    nav { display: flex; gap: 18px; font-size: 14px; }
+    h1 { margin: 42px 0 4px; color: #f8fafc; font-size: clamp(30px, 5vw, 42px); line-height: 1.15; }
+    h2 { margin: 32px 0 8px; color: #f1f5f9; font-size: 20px; }
+    p, li { color: #b6c2d2; }
+    .draft { margin: 20px 0; padding: 12px 14px; border: 1px solid #725b2b; border-left: 3px solid #eabf63; border-radius: 4px; background: #211d14; color: #f3dda7; }
+    .meta { color: #93a3b8; font-size: 14px; }
+    code { color: #dbeafe; }
+    footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid #283548; color: #93a3b8; font-size: 13px; }
+    @media (max-width: 520px) { header { align-items: flex-start; flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <header>
+    <span>Second Brain Graph</span>
+    <nav aria-label="Legal pages"><a href="privacy-policy.html" aria-current="page">Privacy</a><a href="terms.html">Terms</a></nav>
+  </header>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="meta">Draft for review. Effective date: [SET BEFORE PUBLICATION].</p>
+    <p class="draft"><strong>Not ready to publish.</strong> Add the responsible owner, contact details, applicable jurisdiction, and final effective date before this page is used on a public website.</p>
+
+    <p>This draft describes the current local version of Second Brain Graph, a program that reads Markdown files from a directory selected by its operator and creates a graph on that computer. No hosted service or account system is configured in this repository.</p>
+
+    <h2>Information processed on your computer</h2>
+    <p>The program reads Markdown note contents to find explicit wikilinks and, when semantic analysis is enabled, to calculate local text embeddings. The embedding cache stores vectors and file fingerprints, including a content digest, file size, modification time, and model identifier. The cache does not store the original note text.</p>
+    <p>Generated HTML and optional JSON can include note titles, vault-relative paths, links, similarity scores, and graph statistics. Review those files before sharing them. The generated graph does not include the full note bodies.</p>
+
+    <h2>Network requests</h2>
+    <p>Semantic analysis uses a Sentence Transformers model. If the model is not already available locally, the software downloads model files from the configured model provider. The note text is processed on the operator's computer and is not sent to an embedding API by this application. Installing dependencies also contacts the package indexes configured for Python.</p>
+
+    <h2>Retention and deletion</h2>
+    <p>Notes, cache files, and generated exports remain under the locations chosen by the operator. The operator can remove the generated HTML, JSON, and <code>.second_brain</code> cache directory using the file manager or command line.</p>
+
+    <h2>Who operates this software</h2>
+    <p>Responsible owner: [LEGAL NAME OR ORGANIZATION]. Contact: [PRIVACY CONTACT EMAIL]. Applicable jurisdiction: [JURISDICTION]. These details must be confirmed before publication.</p>
+
+    <h2>Changes and questions</h2>
+    <p>For a future hosted website, identify how policy changes will be announced and provide a monitored privacy contact before publishing this page.</p>
+  </main>
+  <footer>Local draft page. This is not a statement that a public service is operating.</footer>
+</body>
+</html>

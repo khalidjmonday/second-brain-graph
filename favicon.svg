@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Second Brain Graph">
+  <rect width="32" height="32" rx="4" fill="#172234"/>
+  <g fill="none" stroke="#93c5fd" stroke-width="2">
+    <path d="M8 9 16 5l8 4v10l-8 6-8-5z"/>
+    <path d="m9 10 6 10 8-10M16 6v13"/>
+  </g>
+  <g fill="#bfdbfe">
+    <circle cx="8" cy="9" r="2"/>
+    <circle cx="16" cy="5" r="2"/>
+    <circle cx="24" cy="9" r="2"/>
+    <circle cx="16" cy="25" r="2"/>
+  </g>
+</svg>

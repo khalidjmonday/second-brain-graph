@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "second-brain-graph"
+version = "0.2.0"
+description = "A local-first Markdown knowledge graph with explicit and semantic links"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Markup :: Markdown",
+]
+dependencies = [
+    "networkx>=3.2,<4.0",
+    "pyvis>=0.3.2,<1.0",
+    "numpy>=1.26,<3.0",
+]
+
+[project.optional-dependencies]
+semantic = ["sentence-transformers>=3.0,<6.0"]
+dev = ["ruff>=0.6,<1.0"]
+
+[project.scripts]
+second-brain-graph = "main:main"
+
+[tool.setuptools]
+py-modules = ["analytics", "exporter", "graph", "main", "parser", "semantic", "visualizer"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
