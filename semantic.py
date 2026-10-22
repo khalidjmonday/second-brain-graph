@@ -7,13 +7,13 @@ inference locally after that.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
 import os
-from pathlib import Path
 import tempfile
-from typing import Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
 
 DEFAULT_MODEL = "all-MiniLM-L6-v2"
 CACHE_VERSION = 1

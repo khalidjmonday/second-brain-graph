@@ -1,12 +1,11 @@
 """Find Markdown notes and extract their explicit Obsidian-style links."""
 
-from dataclasses import dataclass
 import logging
 import os
-from pathlib import Path
 import re
 from collections.abc import Iterable
-
+from dataclasses import dataclass
+from pathlib import Path
 
 # This matches the contents of a simple Obsidian link. Normalization below
 # strips supported alias and heading suffixes before graph resolution.

@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import os
-from pathlib import Path
 import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
 
 import networkx as nx
 
 from analytics import summarize_graph
-
 
 JSON_SCHEMA_VERSION = "1.0"
 

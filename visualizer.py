@@ -1,13 +1,12 @@
 """Render a NetworkX graph as a self-contained interactive HTML file."""
 
-from pathlib import Path
 import json
 import math
 import re
+from pathlib import Path
 
 import networkx as nx
 from pyvis.network import Network
-
 
 INTERACTION_SCRIPT = r"""
 <script>

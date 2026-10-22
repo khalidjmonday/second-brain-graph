@@ -2,9 +2,9 @@
 
 import argparse
 import logging
-from pathlib import Path
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from analytics import summarize_graph
 from exporter import export_graph_json
@@ -14,6 +14,7 @@ from semantic import DEFAULT_MODEL, find_semantic_links
 from visualizer import export_graph
 
 VERSION = "0.2.0"
+LOGGER = logging.getLogger(__name__)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -86,7 +87,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 2
     if not notes:
-        logging.warning("No readable Markdown notes were found under %s", root)
+        LOGGER.warning("No readable Markdown notes were found under %s", root)
     semantic_links = []
     if not args.no_semantic:
         note_contents = {
@@ -128,7 +129,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     summary = summarize_graph(graph)
     for warning in graph.graph.get("warnings", []):
-        logging.warning("%s", warning)
+        LOGGER.warning("%s", warning)
     print(
         f"Created {output}\n"
         f"  Notes: {summary['note_count']}\n"

@@ -1,7 +1,7 @@
 """Build a directed graph from parsed Markdown notes."""
 
+from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
-from typing import Iterable
 
 import networkx as nx
 
@@ -54,9 +54,7 @@ def build_graph(
         for link_name in note.links:
             normalized_target = PurePosixPath(link_name).as_posix().casefold()
             target_key = (
-                normalized_target[:-3]
-                if normalized_target.endswith(".md")
-                else normalized_target
+                normalized_target.removesuffix(".md")
             )
             # Explicit paths win. A stem lookup remains the convenient default.
             target_path = notes_by_path.get(target_key) or notes_by_name.get(
