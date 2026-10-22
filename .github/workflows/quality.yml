@@ -24,10 +24,10 @@ jobs:
       - name: Install package and linter without optional model weights
         run: python -m pip install ".[dev]"
       - name: Lint Python modules
-        run: ruff check analytics.py exporter.py graph.py main.py parser.py semantic.py visualizer.py
+        run: ruff check analytics.py clustering.py exporter.py graph.py main.py parser.py search.py semantic.py visualizer.py
       - name: Compile modules
-        run: python -m compileall -q analytics.py exporter.py graph.py main.py parser.py semantic.py visualizer.py
+        run: python -m compileall -q analytics.py clustering.py exporter.py graph.py main.py parser.py search.py semantic.py visualizer.py
       - name: Build demo HTML and JSON without model download
-        run: second-brain-graph demo_notes --no-semantic --output $RUNNER_TEMP/graph.html --json-output $RUNNER_TEMP/graph.json
+        run: second-brain-graph build demo_notes --no-semantic --output $RUNNER_TEMP/graph.html --json-output $RUNNER_TEMP/graph.json
       - name: Check generated artifacts
         run: python -c "import json,pathlib; p=pathlib.Path('$RUNNER_TEMP'); assert (p/'graph.html').stat().st_size > 10000; d=json.loads((p/'graph.json').read_text()); assert d['schema_version']=='1.0' and d['summary']['note_count']==5"

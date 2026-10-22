@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Added deterministic K-Means topic colors based on cached local embeddings.
+- Added Graph-RAG search with three semantic seed notes and explicit one-hop
+  link context.
+- Added `build` and `search` CLI subcommands.
+
 ## 0.2.0
 
 - Added local MiniLM semantic links with an incremental embedding cache.

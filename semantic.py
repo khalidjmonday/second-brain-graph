@@ -14,6 +14,7 @@ import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 DEFAULT_MODEL = "all-MiniLM-L6-v2"
 CACHE_VERSION = 1
@@ -36,6 +37,7 @@ def find_semantic_links(
     cache_path: Path = Path(".second_brain/embeddings.json"),
     model_name: str = DEFAULT_MODEL,
     batch_size: int = 32,
+    embeddings: Mapping[str, Any] | None = None,
 ) -> list[SemanticLink]:
     """Embed changed notes and return pairs whose cosine score meets threshold.
 
@@ -46,10 +48,54 @@ def find_semantic_links(
     """
     if not 0.0 <= threshold <= 1.0:
         raise ValueError("Similarity threshold must be between 0 and 1.")
+    vectors = embeddings if embeddings is not None else get_note_embeddings(
+        note_contents,
+        note_paths,
+        cache_path=cache_path,
+        model_name=model_name,
+        batch_size=batch_size,
+    )
+    if not vectors:
+        return []
+
+    import numpy as np
+
+    # Since each vector is normalized, a dot product is cosine similarity.
+    # Compare one row at a time to avoid allocating an N-by-N matrix.
+    note_ids = list(vectors)
+    semantic_links: list[SemanticLink] = []
+    for left_index, source in enumerate(note_ids[:-1]):
+        left = vectors[source]
+        for target in note_ids[left_index + 1 :]:
+            right = vectors[target]
+            if left.shape != right.shape:
+                raise RuntimeError(
+                    "Cached embedding dimensions do not match. Clear the embedding cache."
+                )
+            score = float(np.clip(np.dot(left, right), -1.0, 1.0))
+            if score >= threshold:
+                semantic_links.append(
+                    SemanticLink(source=source, target=target, similarity=score)
+                )
+    return semantic_links
+
+
+def get_note_embeddings(
+    note_contents: Mapping[str, str],
+    note_paths: Mapping[str, Path],
+    *,
+    cache_path: Path = Path(".second_brain/embeddings.json"),
+    model_name: str = DEFAULT_MODEL,
+    batch_size: int = 32,
+    model: Any = None,
+) -> dict[str, Any]:
+    """Return normalized vectors, embedding only notes whose cache is stale.
+
+    A caller such as search may pass its loaded model to embed both changed
+    notes and the query without loading the large local model twice.
+    """
     if batch_size < 1:
         raise ValueError("batch_size must be a positive integer.")
-
-    # Normalize and sort keys so pair order and cache writes are deterministic.
     contents = {
         str(note_id): content
         for note_id, content in sorted(note_contents.items(), key=lambda item: item[0])
@@ -57,10 +103,8 @@ def find_semantic_links(
     }
     if not contents:
         _write_cache(cache_path, model_name, {})
-        return []
+        return {}
 
-    # Keep importing the parser and graph builder lightweight when users run
-    # with --no-semantic. NumPy is needed only for actual vector operations.
     try:
         import numpy as np
     except ImportError as error:
@@ -69,12 +113,10 @@ def find_semantic_links(
             "python -m pip install -r requirements.txt"
         ) from error
 
-    cache = _read_cache(cache_path, model_name)
-    cached_notes: dict[str, dict] = cache["notes"]
+    cached_notes = _read_cache(cache_path, model_name)["notes"]
     fingerprints: dict[str, dict] = {}
-    vectors: dict[str, np.ndarray] = {}
+    vectors: dict[str, Any] = {}
     changed_ids: list[str] = []
-
     for note_id, content in contents.items():
         path = note_paths.get(note_id)
         if path is None:
@@ -93,16 +135,15 @@ def find_semantic_links(
         changed_ids.append(note_id)
 
     if changed_ids:
-        # Delay importing the heavyweight ML stack until embeddings are needed.
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError as error:
-            raise RuntimeError(
-                "Semantic linking needs sentence-transformers. Install project "
-                "dependencies with: python -m pip install -r requirements.txt"
-            ) from error
-
-        model = SentenceTransformer(model_name)
+        if model is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+            except ImportError as error:
+                raise RuntimeError(
+                    "Semantic linking needs sentence-transformers. Install project "
+                    "dependencies with: python -m pip install -r requirements.txt"
+                ) from error
+            model = SentenceTransformer(model_name)
         encoded = model.encode(
             [contents[note_id] for note_id in changed_ids],
             batch_size=batch_size,
@@ -117,37 +158,23 @@ def find_semantic_links(
             raise RuntimeError("Embedding model returned an unexpected number of vectors.")
         if not np.isfinite(encoded).all():
             raise RuntimeError("Embedding model returned non-finite values.")
-        for note_id, vector in zip(changed_ids, encoded):
-            vectors[note_id] = _normalize(vector)
+        vectors.update(
+            (note_id, _normalize(vector))
+            for note_id, vector in zip(changed_ids, encoded)
+        )
 
-    # Persist only current files, dropping stale cache entries for deleted notes.
-    cache_notes = {
-        note_id: {
-            "fingerprint": fingerprints[note_id],
-            "embedding": vectors[note_id].astype(float).tolist(),
-        }
-        for note_id in contents
-    }
-    _write_cache(cache_path, model_name, cache_notes)
-
-    # Since each vector is normalized, a dot product is cosine similarity.
-    # Compare one row at a time to avoid allocating an N-by-N matrix.
-    note_ids = list(contents)
-    semantic_links: list[SemanticLink] = []
-    for left_index, source in enumerate(note_ids[:-1]):
-        left = vectors[source]
-        for target in note_ids[left_index + 1 :]:
-            right = vectors[target]
-            if left.shape != right.shape:
-                raise RuntimeError(
-                    "Cached embedding dimensions do not match. Clear the embedding cache."
-                )
-            score = float(np.clip(np.dot(left, right), -1.0, 1.0))
-            if score >= threshold:
-                semantic_links.append(
-                    SemanticLink(source=source, target=target, similarity=score)
-                )
-    return semantic_links
+    _write_cache(
+        cache_path,
+        model_name,
+        {
+            note_id: {
+                "fingerprint": fingerprints[note_id],
+                "embedding": vectors[note_id].astype(float).tolist(),
+            }
+            for note_id in contents
+        },
+    )
+    return vectors
 
 
 def _fingerprint(path: Path, content: str) -> dict[str, int | float | str]:

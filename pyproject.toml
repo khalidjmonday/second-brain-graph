@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "second-brain-graph"
-version = "0.2.0"
-description = "A local-first Markdown knowledge graph with explicit and semantic links"
+version = "0.3.0"
+description = "A local-first Markdown graph with semantic search and topic clustering"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -27,6 +27,7 @@ dependencies = [
     "pyvis>=0.3.2,<1.0",
     "numpy>=1.26,<3.0",
     "scipy>=1.10,<2.0",
+    "scikit-learn>=1.4,<2.0",
 ]
 
 [project.optional-dependencies]
@@ -37,7 +38,17 @@ dev = ["ruff>=0.6,<1.0"]
 second-brain-graph = "main:main"
 
 [tool.setuptools]
-py-modules = ["analytics", "exporter", "graph", "main", "parser", "semantic", "visualizer"]
+py-modules = [
+    "analytics",
+    "clustering",
+    "exporter",
+    "graph",
+    "main",
+    "parser",
+    "search",
+    "semantic",
+    "visualizer",
+]
 
 [tool.ruff]
 line-length = 100

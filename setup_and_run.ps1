@@ -60,7 +60,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host 'Generating the interactive graph...'
-& $pythonExe (Join-Path $PSScriptRoot 'main.py') $VaultPath --output $OutputPath
+& $pythonExe (Join-Path $PSScriptRoot 'main.py') build $VaultPath --output $OutputPath
 if ($LASTEXITCODE -ne 0) {
     throw "Graph generation failed with exit code $LASTEXITCODE."
 }

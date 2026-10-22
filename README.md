@@ -14,6 +14,10 @@ model from Hugging Face, then uses the local model and embedding cache.
   heading fragments, and folder-qualified targets.
 - **Local semantic discovery:** `all-MiniLM-L6-v2` suggestions with a
   configurable cosine threshold and incremental, content-verified caching.
+- **Topic colors:** up to five K-Means clusters make related note vectors easy
+  to distinguish in the graph.
+- **Graph-RAG retrieval:** a local query returns its three closest note seeds
+  and their direct explicit-link neighbors.
 - **Graph exploration:** search, open-reference/orphan/hub filters, an inbound
   and outbound inspector, semantic-match scores, and shortest explicit-link
   route tracing.
@@ -32,7 +36,7 @@ Requires Python 3.10 or newer. From the project directory:
 
 ```powershell
 python -m pip install -r requirements.txt
-python main.py .\demo_notes --output .\index.html --json-output .\graph.json
+python main.py build .\demo_notes --output .\index.html --json-output .\graph.json
 ```
 
 Open `index.html` in a browser. The first run downloads the MiniLM model and
@@ -43,9 +47,16 @@ visible at the default `0.75` threshold.
 To generate a graph for your own vault:
 
 ```powershell
-python main.py "C:\path\to\your\vault" `
+python main.py build "C:\path\to\your\vault" `
   --output .\build\vault-graph.html `
   --json-output .\build\vault-graph.json
+```
+
+Search for a concept and retrieve the three closest notes plus their direct
+explicit wikilink neighbors:
+
+```powershell
+python main.py search "distributed systems" --directory "C:\path\to\your\vault"
 ```
 
 On Windows, `setup_and_run.ps1` bootstraps a project-local Python runtime,
@@ -65,13 +76,18 @@ To use that runtime with another vault:
 ## CLI options
 
 ```text
-python main.py DIRECTORY [--output HTML]
+python main.py build [DIRECTORY] [--output HTML]
   [--json-output JSON]
   [--similarity-threshold 0..1]
   [--model MODEL_ID_OR_LOCAL_PATH]
   [--cache CACHE_JSON]
   [--exclude-dir NAME ...]
   [--no-semantic]
+
+python main.py search QUERY [--directory DIRECTORY]
+  [--model MODEL_ID_OR_LOCAL_PATH]
+  [--cache CACHE_JSON]
+  [--exclude-dir NAME ...]
 ```
 
 - `--similarity-threshold` defaults to `0.75`. Lower it to discover broader
@@ -81,9 +97,10 @@ python main.py DIRECTORY [--output HTML]
 - `--cache` defaults to `<vault>/.second_brain/embeddings.json`.
 - `--exclude-dir` adds directory names to the default exclusions (`.git`,
   `.obsidian`, `.second_brain`, `.trash`, `.venv`, `venv`, and `node_modules`).
-- `--no-semantic` builds the explicit graph without importing or loading the
-  embedding model. Install the lightweight package with `python -m pip install
-  .` if you only need this mode; `requirements.txt` installs semantic support.
+- `--no-semantic` skips embedding-based links and clustering for a lightweight
+  explicit-only build. Normal builds and searches use local embeddings.
+- `build` and `search` default to the included `demo_notes` folder; pass a vault
+  path to `build` or use `--directory` with `search` for your own notes.
 
 Run `python main.py --help` for the complete help text.
 
@@ -96,7 +113,7 @@ flowchart LR
     B --> D[Note text and file fingerprints]
     D --> E[Embedding cache]
     E --> F[Local MiniLM model]
-    F --> G[Cosine similarity]
+    F --> G[Cosine similarity and K-Means]
     C --> H[Directed NetworkX graph]
     G --> H
     H --> I[Interactive Pyvis HTML]
@@ -123,6 +140,12 @@ modification time, file size, and a SHA-256 digest of its content. Cache writes
 are atomic, so an interrupted run does not leave a partial cache file. The
 cache stores vectors and fingerprints, not note text.
 
+Builds group note vectors with K-Means, using up to five clusters; each cluster
+gets a distinct color in the graph. Search embeds the query and scores notes by
+cosine similarity, then retrieves explicit incoming and outgoing neighbors of
+the top three seed notes. Semantic suggestions are excluded from traversal
+context.
+
 ## Outputs
 
 The HTML file is self-contained and can be opened locally without a web
@@ -135,8 +158,8 @@ The optional JSON file has schema version `1.0` and contains:
   notes ranked by PageRank over explicit links.
 - `semantic_settings`: whether semantic discovery was enabled, the model name,
   and the cutoff used for the run.
-- `nodes`: stable vault-relative IDs, titles, paths, and whether the note
-  exists.
+- `nodes`: stable vault-relative IDs, titles, paths, whether the note exists,
+  and cluster color when clustering is enabled.
 - `edges`: source, target, edge type, explicit/semantic flags, and similarity
   scores where available, plus whether the relationship is an explicit
   directed wikilink.
@@ -147,7 +170,9 @@ The optional JSON file has schema version `1.0` and contains:
 | --- | --- |
 | `parser.py` | Recursively reads Markdown, prunes common metadata folders, and extracts wikilinks and note content. |
 | `semantic.py` | Generates local MiniLM embeddings, validates cache fingerprints, and finds similarity pairs. |
-| `graph.py` | Resolves wikilinks and combines explicit and semantic relationships in a directed graph. |
+| `clustering.py` | Runs K-Means over cached embeddings and assigns cluster colors. |
+| `search.py` | Ranks query-to-note similarity and retrieves one-hop explicit-link context. |
+| `graph.py` | Resolves wikilinks and combines explicit, semantic, and cluster metadata. |
 | `analytics.py` | Calculates graph health metrics and PageRank-based note rankings. |
 | `visualizer.py` | Renders the graph and interactive explorer as self-contained HTML. |
 | `exporter.py` | Writes a versioned, machine-readable JSON graph export. |
@@ -166,6 +191,9 @@ semantic pairs above the threshold.
 - Only changed notes require model inference. Similarity comparison takes
   `O(N²D)` time, using `O(ND + S)` additional memory without allocating a full
   `N × N` similarity matrix.
+- K-Means takes roughly `O(IKND)` for `I` iterations and `K <= 5` clusters.
+  Query scoring takes `O(ND)`, then traversal visits only the incoming and
+  outgoing edges of each of the three seeds.
 - PageRank uses iterative graph passes. Browser physics layout is usually the
   dominant cost for very dense, large vaults; increase the threshold or hide
   semantic edges to keep the view readable.
@@ -198,8 +226,9 @@ Sentence Transformers, NumPy, and Pyvis.
 ## Development
 
 Install the full dependency set with `python -m pip install -r requirements.txt`.
-The project is also installable with `python -m pip install .`; semantic
-support is an optional extra: `python -m pip install ".[semantic]"`.
+The project is also installable with `python -m pip install .`; install the
+`semantic` extra for MiniLM and the optional `dev` extra for Ruff:
+`python -m pip install ".[semantic,dev]"`.
 
 GitHub Actions compiles the modules and smoke-builds the demo on Python 3.10
 through 3.14 without downloading model weights. See [CONTRIBUTING.md](CONTRIBUTING.md)

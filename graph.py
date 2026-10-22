@@ -1,6 +1,6 @@
 """Build a directed graph from parsed Markdown notes."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path, PurePosixPath
 
 import networkx as nx
@@ -13,6 +13,7 @@ def build_graph(
     notes: list[MarkdownNote],
     root: Path,
     semantic_links: Iterable[SemanticLink] = (),
+    cluster_colors: Mapping[str, str] | None = None,
 ) -> nx.DiGraph:
     """Create a node for every note and a directed edge for every wikilink.
 
@@ -45,6 +46,7 @@ def build_graph(
             # user's absolute filesystem location into shareable artifacts.
             path=node_id,
             exists=True,
+            color=(cluster_colors or {}).get(node_id),
         )
 
     # Each directed edge means "source note links to destination note".
