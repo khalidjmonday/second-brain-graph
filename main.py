@@ -7,7 +7,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from analytics import summarize_graph
-from clustering import cluster_note_colors
+from clustering import cluster_note_assignments
+from export import export_presentation_slide
 from exporter import export_graph_json
 from graph import build_graph
 from parser import parse_markdown_directory
@@ -15,9 +16,8 @@ from search import search_graph
 from semantic import DEFAULT_MODEL, find_semantic_links, get_note_embeddings
 from visualizer import export_graph
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 LOGGER = logging.getLogger(__name__)
-DEFAULT_DIRECTORY = Path("demo_notes")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -32,7 +32,7 @@ def _parser() -> argparse.ArgumentParser:
     build = commands.add_parser(
         "build", help="embed, cluster, and render Markdown notes"
     )
-    build.add_argument("directory", nargs="?", type=Path, default=DEFAULT_DIRECTORY)
+    build.add_argument("directory", nargs="?", type=Path, default=Path.cwd())
     build.add_argument("--output", type=Path, default=Path("index.html"))
     build.add_argument("--json-output", type=Path)
     build.add_argument("--similarity-threshold", type=float, default=0.75, metavar="0..1")
@@ -49,7 +49,7 @@ def _parser() -> argparse.ArgumentParser:
         "search", help="retrieve semantic seeds and linked context"
     )
     search.add_argument("query", help="text to search for")
-    search.add_argument("--directory", type=Path, default=DEFAULT_DIRECTORY)
+    search.add_argument("--directory", type=Path, default=Path.cwd())
     search.add_argument("--cache", type=Path)
     search.add_argument("--model", default=DEFAULT_MODEL)
     search.add_argument("--exclude-dir", action="append", default=None, metavar="NAME")
@@ -107,6 +107,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         embeddings = {}
         semantic_links = []
         cluster_colors = {}
+        cluster_categories = {}
         if not args.no_semantic:
             embeddings = get_note_embeddings(
                 note_contents,
@@ -114,7 +115,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 cache_path=cache_path,
                 model_name=args.model,
             )
-            cluster_colors = cluster_note_colors(
+            cluster_colors, cluster_categories = cluster_note_assignments(
                 embeddings, note_ids=list(note_contents)
             )
             semantic_links = find_semantic_links(
@@ -127,7 +128,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
 
         graph = build_graph(
-            notes, root, semantic_links=semantic_links, cluster_colors=cluster_colors
+            notes,
+            root,
+            semantic_links=semantic_links,
+            cluster_colors=cluster_colors,
+            cluster_categories=cluster_categories,
         )
         graph.graph["semantic_settings"] = {
             "enabled": not args.no_semantic,
@@ -136,8 +141,21 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.similarity_threshold if not args.no_semantic else None
             ),
         }
-        output = export_graph(graph, args.output)
+        background_path = next(
+            (
+                root / filename
+                for filename in ("poster.jpg", "background.png")
+                if (root / filename).is_file()
+            ),
+            None,
+        )
+        output = export_graph(graph, args.output, background_path=background_path)
         json_output = export_graph_json(graph, args.json_output) if args.json_output else None
+        try:
+            slide_output = export_presentation_slide(output)
+        except RuntimeError as error:
+            LOGGER.warning("Presentation slide export skipped: %s", error)
+            slide_output = None
     except (
         NotADirectoryError,
         OSError,
@@ -163,6 +181,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     if json_output:
         print(f"JSON export: {json_output}")
+    if slide_output:
+        print(f"Presentation slide: {slide_output}")
     if summary["top_notes_by_pagerank"]:
         print("Most central notes:")
         for item in summary["top_notes_by_pagerank"][:5]:

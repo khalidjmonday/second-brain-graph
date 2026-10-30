@@ -7,9 +7,12 @@ to stay local-first, modular, and usable from both the CLI and a fresh clone.
 
 ```powershell
 python -m pip install -r requirements.txt
-python -m compileall -q analytics.py clustering.py exporter.py graph.py main.py parser.py search.py semantic.py visualizer.py
+python -m compileall -q analytics.py clustering.py export.py exporter.py graph.py gui.py main.py parser.py search.py semantic.py visualizer.py
 python main.py build .\demo_notes --output .\build\demo.html --json-output .\build\demo.json
 ```
+
+Install the Playwright browser once with `python -m playwright install chromium`
+to exercise presentation-slide export locally.
 
 For parser, graph, and rendering work that does not need model inference, use
 `--no-semantic`. The included vault has examples of explicit links, an

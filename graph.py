@@ -14,6 +14,7 @@ def build_graph(
     root: Path,
     semantic_links: Iterable[SemanticLink] = (),
     cluster_colors: Mapping[str, str] | None = None,
+    cluster_categories: Mapping[str, str] | None = None,
 ) -> nx.DiGraph:
     """Create a node for every note and a directed edge for every wikilink.
 
@@ -47,6 +48,8 @@ def build_graph(
             path=node_id,
             exists=True,
             color=(cluster_colors or {}).get(node_id),
+            cluster=(cluster_categories or {}).get(node_id, "Unclustered"),
+            summary=_note_summary(note.content),
         )
 
     # Each directed edge means "source note links to destination note".
@@ -110,3 +113,19 @@ def build_graph(
 def _relative_id(path: Path, root: Path) -> str:
     """Return a stable, portable ID relative to the scanned directory."""
     return path.resolve().relative_to(root).as_posix()
+
+
+def _note_summary(content: str, limit: int = 420) -> str:
+    """Use a short source excerpt as a safe, faithful note preview."""
+    if content.startswith("---\n") and "\n---" in content[4:]:
+        content = content.split("\n---", maxsplit=1)[1]
+    for paragraph in content.split("\n\n"):
+        lines = [
+            line.strip()
+            for line in paragraph.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        summary = " ".join(lines)
+        if summary and summary != "---":
+            return summary if len(summary) <= limit else summary[: limit - 1].rstrip() + "…"
+    return "No preview text available."

@@ -59,10 +59,21 @@ if ($LASTEXITCODE -ne 0) {
     throw "Dependency installation failed with exit code $LASTEXITCODE."
 }
 
+Write-Host 'Installing the Chromium browser for presentation slide export...'
+& $pythonExe -m playwright install chromium
+if ($LASTEXITCODE -ne 0) {
+    throw "Chromium installation failed with exit code $LASTEXITCODE."
+}
+
 Write-Host 'Generating the interactive graph...'
 & $pythonExe (Join-Path $PSScriptRoot 'main.py') build $VaultPath --output $OutputPath
 if ($LASTEXITCODE -ne 0) {
     throw "Graph generation failed with exit code $LASTEXITCODE."
 }
 
-Write-Host "Done. Open $((Resolve-Path -LiteralPath $OutputPath).Path) in your browser."
+$resolvedOutput = (Resolve-Path -LiteralPath $OutputPath).Path
+$slidePath = Join-Path (Split-Path -Parent $resolvedOutput) 'Presentation_Slide.png'
+Write-Host "Done. Open $resolvedOutput in your browser."
+if (Test-Path -LiteralPath $slidePath) {
+    Write-Host "PowerPoint slide: $slidePath"
+}

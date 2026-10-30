@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Added native folder selection, note-preview and cluster details in the graph,
+  optional poster backgrounds, and automatic 4K slide export.
+
 ## 0.3.0
 
 - Added deterministic K-Means topic colors based on cached local embeddings.

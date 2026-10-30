@@ -1,7 +1,9 @@
 """Render a NetworkX graph as a self-contained interactive HTML file."""
 
+import base64
 import json
 import math
+import mimetypes
 import re
 from pathlib import Path
 
@@ -27,6 +29,18 @@ INTERACTION_SCRIPT = r"""
   let activeRoute = null;
   const originalNodes = nodes.get();
   const originalEdges = edges.get();
+
+  function hideDetails() {
+    inspector.classList.remove("is-open");
+    inspector.setAttribute("aria-hidden", "true");
+    inspector.inert = true;
+  }
+
+  inspector.addEventListener("transitionend", (event) => {
+    if (event.target === inspector && !inspector.classList.contains("is-open")) {
+      inspector.hidden = true;
+    }
+  });
 
   const openReferenceIds = new Set(
     records.filter((record) => !record.exists).map((record) => record.id),
@@ -60,7 +74,7 @@ INTERACTION_SCRIPT = r"""
     const selected = network.getSelectedNodes();
     if (selected.some((id) => !visible.has(id))) {
       network.unselectAll();
-      inspector.hidden = true;
+      hideDetails();
     }
     if (shouldFit) network.fit({ animation: { duration: 350, easingFunction: "easeInOutQuad" } });
   }
@@ -124,6 +138,10 @@ INTERACTION_SCRIPT = r"""
     document.getElementById("detail-kind").textContent = record.exists ? "MARKDOWN NOTE" : "UNCREATED TARGET";
     document.getElementById("detail-kind").classList.toggle("is-missing", !record.exists);
     document.getElementById("detail-title").textContent = record.label;
+    document.getElementById("detail-cluster").textContent = record.cluster || "Unclustered";
+    document.getElementById("detail-summary").textContent = record.exists
+      ? record.summary || "No preview text available."
+      : "This linked note has not been created yet.";
     document.getElementById("detail-path").textContent = record.exists ? record.path : "This note has been linked, but no matching .md file exists yet.";
     document.getElementById("detail-in-count").textContent = record.incoming.length;
     document.getElementById("detail-out-count").textContent = record.outgoing.length;
@@ -137,6 +155,9 @@ INTERACTION_SCRIPT = r"""
     renderLinkList("outgoing-list", record.outgoing, "This note has no outgoing links.");
     renderSemanticList("semantic-list", record.semantic || []);
     inspector.hidden = false;
+    inspector.setAttribute("aria-hidden", "false");
+    inspector.inert = false;
+    requestAnimationFrame(() => inspector.classList.add("is-open"));
   }
 
   function focusNote(id) {
@@ -300,7 +321,7 @@ INTERACTION_SCRIPT = r"""
     search.value = "";
     resultBox.hidden = true;
     network.unselectAll();
-    inspector.hidden = true;
+    hideDetails();
     showSemantic = true;
     semanticToggle.setAttribute("aria-pressed", "true");
     semanticToggle.textContent = "Semantic links on";
@@ -308,7 +329,7 @@ INTERACTION_SCRIPT = r"""
     setFilter("all");
   });
   document.getElementById("close-inspector").addEventListener("click", () => {
-    inspector.hidden = true;
+    hideDetails();
     network.unselectAll();
   });
   document.getElementById("trace-route").addEventListener("click", beginRoute);
@@ -330,14 +351,14 @@ INTERACTION_SCRIPT = r"""
       }
       showDetails(record);
     } else {
-      inspector.hidden = true;
+      hideDetails();
     }
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       search.value = "";
       resultBox.hidden = true;
-      inspector.hidden = true;
+      hideDetails();
       network.unselectAll();
       if (routeStartId !== null || activeRoute !== null) clearRoute();
       if (document.activeElement === search) search.blur();
@@ -357,6 +378,7 @@ INTERACTION_SCRIPT = r"""
 def export_graph(
     graph: nx.DiGraph,
     output_path: Path = Path("index.html"),
+    background_path: Path | None = None,
 ) -> Path:
     """Write an interactive visualization to ``output_path``.
 
@@ -366,6 +388,7 @@ def export_graph(
     """
     output_path = output_path.expanduser().resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    background_uri = _background_data_uri(background_path)
 
     network = Network(
         height="100vh",
@@ -394,6 +417,8 @@ def export_graph(
         # Use restrained, high-contrast colors to distinguish node roles.
         if not exists:
             background, border = "#fb7185", "#fecdd3"
+        elif attributes.get("color"):
+            background, border = attributes["color"], "#f8fafc"
         elif degree >= 4:
             background, border = "#0f766e", "#99f6e4"
         elif graph.out_degree(node_id) == 0 and degree > 0:
@@ -419,8 +444,8 @@ def export_graph(
             borderWidthSelected=4,
             shadow={
                 "enabled": True,
-                "color": _rgba(background, 0.4 if exists else 0.55),
-                "size": 18 if exists else 22,
+                "color": _rgba(background, 0.68 if exists else 0.55),
+                "size": 25 if exists else 22,
                 "x": 0,
                 "y": 3,
             },
@@ -538,6 +563,8 @@ def export_graph(
                 "label": str(attributes.get("label", node_id)),
                 "path": str(attributes.get("path", "")),
                 "exists": attributes.get("exists", True),
+                "cluster": str(attributes.get("cluster", "Unclustered")),
+                "summary": str(attributes.get("summary", "No preview text available.")),
                 "incoming": incoming,
                 "outgoing": outgoing,
                 "semantic": semantic,
@@ -608,12 +635,14 @@ def export_graph(
       <button class="filter-button" data-filter="orphans"><span>Orphans</span><b>{orphan_count}</b></button>
       <button class="filter-button" data-filter="hubs"><span>Hubs</span><b>{hub_count}</b></button>
     </nav>
-    <aside id="note-inspector" class="note-inspector" hidden aria-live="polite">
+    <aside id="note-inspector" class="note-inspector" hidden aria-hidden="true" aria-live="polite">
       <div class="inspector-head">
         <div><span id="detail-kind" class="detail-kind">NOTE</span><h2 id="detail-title">Note details</h2></div>
         <button id="close-inspector" class="icon-button" type="button" aria-label="Close details">×</button>
       </div>
       <p id="detail-path" class="detail-path"></p>
+      <p id="detail-cluster" class="detail-cluster">Unclustered</p>
+      <section class="note-summary"><h3>NOTE SUMMARY</h3><p id="detail-summary"></p></section>
       <div class="detail-counts">
         <span><b id="detail-in-count">0</b><small>INBOUND</small></span>
         <span><b id="detail-out-count">0</b><small>OUTBOUND</small></span>
@@ -652,6 +681,16 @@ def export_graph(
     # mangles glyphs, while the browser displays proper HTML entities.
     html = html.replace("\u00c2\u00b7", "&middot;").replace("\u00c3\u2014", "&times;")
 
+    poster_style = ""
+    if background_uri:
+        poster_style = f"""
+      body::before {{
+        content: ""; position: fixed; inset: -8px; z-index: 0; pointer-events: none;
+        background-image: url("{background_uri}"); background-size: cover;
+        background-position: center; filter: brightness(.4) blur(5px);
+      }}
+      #mynetwork {{ z-index: 1; }}
+    """
     theme = """
     <style id="second-brain-theme">
       :root { color-scheme: dark; font-family: Inter, "Segoe UI", Arial, sans-serif; }
@@ -664,8 +703,9 @@ def export_graph(
         position: fixed !important; inset: 0 !important;
         width: 100vw !important; height: 100vh !important;
         border: 0 !important;
-        background: #0b1220 !important;
+        background: transparent !important;
       }
+      /* poster-background */
       .graph-toolbar {
         position: fixed; z-index: 20; top: 18px; left: 20px; right: 20px;
         display: grid; grid-template-columns: auto minmax(220px, 410px) auto;
@@ -712,7 +752,8 @@ def export_graph(
       .filter-button:hover { color: #f1f5f9; background: rgba(148, 163, 184, .08); }
       .filter-button.is-active { border-color: rgba(96, 165, 250, .28); color: #dbeafe; background: rgba(59, 130, 246, .13); }
       .filter-button.is-active b { color: #bfdbfe; background: rgba(59, 130, 246, .18); }
-      .note-inspector { position: fixed; z-index: 21; top: 84px; right: 20px; display: flex; width: min(330px, calc(100vw - 40px)); max-height: calc(100vh - 158px); flex-direction: column; overflow: auto; padding: 17px; border: 1px solid rgba(148, 163, 184, .19); border-radius: 7px; background: rgba(13, 20, 36, .96); box-shadow: 0 22px 60px rgba(0, 0, 0, .38); backdrop-filter: blur(18px); }
+      .note-inspector { position: fixed; z-index: 21; top: 84px; right: 20px; display: flex; width: min(330px, calc(100vw - 40px)); max-height: calc(100vh - 158px); flex-direction: column; overflow: auto; padding: 17px; border: 1px solid rgba(148, 163, 184, .19); border-radius: 7px; background: rgba(13, 20, 36, .96); box-shadow: 0 22px 60px rgba(0, 0, 0, .38); backdrop-filter: blur(18px); transform: translateX(calc(100% + 24px)); opacity: 0; transition: transform .24s ease, opacity .24s ease; }
+      .note-inspector.is-open { transform: translateX(0); opacity: 1; }
       .note-inspector[hidden] { display: none; }
       .inspector-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
       .detail-kind { color: #67e8f9; font-size: 8px; font-weight: 800; letter-spacing: .16em; }
@@ -721,6 +762,10 @@ def export_graph(
       .icon-button { flex: none; width: 29px; height: 29px; border: 1px solid rgba(148, 163, 184, .16); border-radius: 4px; color: #9aa8bc; background: rgba(148, 163, 184, .06); font-size: 19px; line-height: 1; cursor: pointer; }
       .icon-button:hover { color: #fff; background: rgba(148, 163, 184, .15); }
       .detail-path { margin: 8px 0 15px; overflow-wrap: anywhere; color: #8492a8; font-size: 10px; line-height: 1.5; }
+      .detail-cluster { width: fit-content; margin: 0 0 12px; padding: 5px 8px; border: 1px solid rgba(103, 232, 249, .2); border-radius: 4px; color: #a5f3fc; font-size: 9px; }
+      .note-summary { margin: 2px 0 14px; }
+      .note-summary h3 { margin: 0 0 6px; color: #9caac0; font-size: 8px; letter-spacing: .13em; }
+      .note-summary p { margin: 0; color: #cbd5e1; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
       .detail-counts { display: grid; grid-template-columns: repeat(3, 1fr); padding: 11px 0; border-top: 1px solid rgba(148, 163, 184, .12); border-bottom: 1px solid rgba(148, 163, 184, .12); }
       .detail-counts span { display: grid; justify-items: center; gap: 4px; }
       .detail-counts span + span { border-left: 1px solid rgba(148, 163, 184, .12); }
@@ -781,7 +826,7 @@ def export_graph(
         .graph-actions { right: 10px; bottom: 44px; }
       }
     </style>
-    """
+    """.replace("/* poster-background */", poster_style)
     # A hand-authored SVG keeps the standalone graph branded without external
     # assets or generated imagery. The same vector is provided in the repo for
     # a future website to use at its own domain.
@@ -827,3 +872,15 @@ def _rgba(hex_color: str, alpha: float) -> str:
         for index in (1, 3, 5)
     )
     return f"rgba({red}, {green}, {blue}, {alpha})"
+
+
+def _background_data_uri(path: Path | None) -> str | None:
+    """Embed a selected JPG/PNG so the HTML stays portable and offline-ready."""
+    if path is None or path.suffix.casefold() not in {".jpg", ".jpeg", ".png"}:
+        return None
+    try:
+        payload = base64.b64encode(path.read_bytes()).decode("ascii")
+    except OSError:
+        return None
+    mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    return f"data:{mime_type};base64,{payload}"

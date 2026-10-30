@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "second-brain-graph"
-version = "0.3.0"
+version = "0.4.0"
 description = "A local-first Markdown graph with semantic search and topic clustering"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,17 +32,21 @@ dependencies = [
 
 [project.optional-dependencies]
 semantic = ["sentence-transformers>=3.0,<6.0"]
+presentation = ["playwright>=1.45,<2.0"]
 dev = ["ruff>=0.6,<1.0"]
 
 [project.scripts]
 second-brain-graph = "main:main"
+second-brain-graph-gui = "gui:main"
 
 [tool.setuptools]
 py-modules = [
     "analytics",
     "clustering",
     "exporter",
+    "export",
     "graph",
+    "gui",
     "main",
     "parser",
     "search",

@@ -36,8 +36,14 @@ Requires Python 3.10 or newer. From the project directory:
 
 ```powershell
 python -m pip install -r requirements.txt
+python -m playwright install chromium
 python main.py build .\demo_notes --output .\index.html --json-output .\graph.json
 ```
+
+To choose a vault in a native folder picker, run `python gui.py`. Each build
+also writes `Presentation_Slide.png` beside the HTML when Playwright Chromium
+is installed. Add `poster.jpg` or `background.png` to the selected vault to
+use it as the graph background.
 
 Open `index.html` in a browser. The first run downloads the MiniLM model and
 may take longer; later runs reuse it and the vault cache. The included demo
@@ -60,10 +66,14 @@ python main.py search "distributed systems" --directory "C:\path\to\your\vault"
 ```
 
 On Windows, `setup_and_run.ps1` bootstraps a project-local Python runtime,
-installs dependencies, and builds the demo:
+installs dependencies, and builds the demo. To create a map for any folder,
+run `run_graph.bat` from that folder; it scans recursively and writes
+`index.html` into the same folder. You can also pass the folder path directly:
 
 ```powershell
 .\setup_and_run.ps1
+Set-Location "C:\path\to\your\vault"
+& "C:\path\to\SecondBrainGraph\run_graph.bat"
 ```
 
 To use that runtime with another vault:
@@ -99,8 +109,9 @@ python main.py search QUERY [--directory DIRECTORY]
   `.obsidian`, `.second_brain`, `.trash`, `.venv`, `venv`, and `node_modules`).
 - `--no-semantic` skips embedding-based links and clustering for a lightweight
   explicit-only build. Normal builds and searches use local embeddings.
-- `build` and `search` default to the included `demo_notes` folder; pass a vault
-  path to `build` or use `--directory` with `search` for your own notes.
+- `build` and `search` default to the current working directory. From a vault,
+  `python C:\path\to\SecondBrainGraph\main.py build` scans that vault;
+  `run_graph.bat` provides the same behavior on Windows.
 
 Run `python main.py --help` for the complete help text.
 
@@ -149,8 +160,10 @@ context.
 ## Outputs
 
 The HTML file is self-contained and can be opened locally without a web
-server. It includes the graph and note titles/relative paths, but not note
-bodies or absolute vault paths.
+server. It includes note titles, relative paths, a short first-paragraph
+preview (up to 420 characters), cluster labels, and the optional embedded
+background poster. It does not include full note bodies or absolute vault paths.
+The 4K PNG is saved beside the selected HTML output.
 
 The optional JSON file has schema version `1.0` and contains:
 
@@ -159,7 +172,7 @@ The optional JSON file has schema version `1.0` and contains:
 - `semantic_settings`: whether semantic discovery was enabled, the model name,
   and the cutoff used for the run.
 - `nodes`: stable vault-relative IDs, titles, paths, whether the note exists,
-  and cluster color when clustering is enabled.
+  and cluster label and color when clustering is enabled.
 - `edges`: source, target, edge type, explicit/semantic flags, and similarity
   scores where available, plus whether the relationship is an explicit
   directed wikilink.
@@ -175,6 +188,8 @@ The optional JSON file has schema version `1.0` and contains:
 | `graph.py` | Resolves wikilinks and combines explicit, semantic, and cluster metadata. |
 | `analytics.py` | Calculates graph health metrics and PageRank-based note rankings. |
 | `visualizer.py` | Renders the graph and interactive explorer as self-contained HTML. |
+| `gui.py` | Opens a native folder picker and starts a build for the chosen vault. |
+| `export.py` | Captures a 3840×2160 presentation PNG with Playwright Chromium. |
 | `exporter.py` | Writes a versioned, machine-readable JSON graph export. |
 | `main.py` | CLI orchestration and run summary. |
 
@@ -202,8 +217,8 @@ semantic pairs above the threshold.
 
 The model runs locally and note text is not sent to an embedding API. The
 model itself is downloaded on the first run unless a local model path is
-provided. The HTML and JSON outputs contain note titles, relative paths, and
-links, so review them before sharing.
+provided. The HTML also includes a short excerpt from each note and embeds a
+selected background image, so review it before sharing. JSON omits note text.
 
 The parser focuses on wikilinks. It does not parse Markdown embeds,
 block references, tags, or frontmatter metadata. Semantic matches are

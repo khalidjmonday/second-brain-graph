@@ -9,10 +9,20 @@ UNCLUSTERED_COLOR = "#94A3B8"
 def cluster_note_colors(
     embeddings: Mapping[str, object], note_ids: list[str] | None = None
 ) -> dict[str, str]:
-    """Map note IDs to colors using K-Means over their embedding vectors."""
+    """Map note IDs to cluster colors using their embedding vectors."""
+    return cluster_note_assignments(embeddings, note_ids)[0]
+
+
+def cluster_note_assignments(
+    embeddings: Mapping[str, object], note_ids: list[str] | None = None
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Return note-to-color and note-to-category maps from one K-Means fit."""
     all_note_ids = sorted(note_ids if note_ids is not None else embeddings)
     if not embeddings:
-        return {note_id: UNCLUSTERED_COLOR for note_id in all_note_ids}
+        return (
+            {note_id: UNCLUSTERED_COLOR for note_id in all_note_ids},
+            {note_id: "Unclustered" for note_id in all_note_ids},
+        )
 
     import numpy as np
     from sklearn.cluster import KMeans
@@ -29,13 +39,13 @@ def cluster_note_colors(
     labels = KMeans(n_clusters=cluster_count, random_state=42, n_init=10).fit_predict(
         vectors
     )
-    colors = {
-        note_id: CLUSTER_COLORS[int(cluster_id)]
-        for note_id, cluster_id in zip(embedded_ids, labels)
-    }
-    colors.update(
-        (note_id, UNCLUSTERED_COLOR)
-        for note_id in all_note_ids
-        if note_id not in colors
-    )
-    return colors
+    colors = {}
+    categories = {}
+    for note_id, cluster_id in zip(embedded_ids, labels):
+        colors[note_id] = CLUSTER_COLORS[int(cluster_id)]
+        categories[note_id] = f"Topic cluster {int(cluster_id) + 1}"
+    for note_id in all_note_ids:
+        if note_id not in colors:
+            colors[note_id] = UNCLUSTERED_COLOR
+            categories[note_id] = "Unclustered"
+    return colors, categories

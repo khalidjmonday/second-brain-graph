@@ -27,6 +27,7 @@ def export_graph_json(graph: nx.DiGraph, output_path: Path) -> Path:
             "path": attributes.get("path"),
             "exists": attributes.get("exists", True),
             "cluster_color": attributes.get("color"),
+            "cluster": attributes.get("cluster", "Unclustered"),
         }
         for node_id, attributes in sorted(graph.nodes(data=True), key=lambda pair: str(pair[0]))
     ]
