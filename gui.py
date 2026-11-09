@@ -27,7 +27,7 @@ def main() -> int:
         return 0
 
     folder = Path(selected).resolve()
-    html_path = folder / "index.html"
+    html_path = folder / "graph.html"
     status = run_cli(["build", str(folder), "--output", str(html_path)])
     if status == 0:
         slide_path = folder / "Presentation_Slide.png"

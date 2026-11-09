@@ -6,7 +6,6 @@ __pycache__/
 *.py[cod]
 .env
 .env.*
-index.html
 .second_brain/
 **/.second_brain/
 build/

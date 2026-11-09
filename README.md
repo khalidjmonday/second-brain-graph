@@ -37,15 +37,22 @@ Requires Python 3.10 or newer. From the project directory:
 ```powershell
 python -m pip install -r requirements.txt
 python -m playwright install chromium
-python main.py build .\demo_notes --output .\index.html --json-output .\graph.json
+npm install
+npm run build
+python main.py build .\demo_notes --output .\demo_notes\graph.html --json-output .\graph.json
 ```
+
+After `npm run build`, double-click the project root `index.html` to open the
+standalone Second Brain Atlas interface. The browser app and generated vault
+graph are separate files: the app lives in `site/app.html`, while Python
+builds write `graph.html` by default.
 
 To choose a vault in a native folder picker, run `python gui.py`. Each build
 also writes `Presentation_Slide.png` beside the HTML when Playwright Chromium
 is installed. Add `poster.jpg` or `background.png` to the selected vault to
 use it as the graph background.
 
-Open `index.html` in a browser. The first run downloads the MiniLM model and
+Open the generated `graph.html` in a browser. The first semantic run downloads the MiniLM model and
 may take longer; later runs reuse it and the vault cache. The included demo
 has two related notes without wikilinks between them, so the semantic suggestion is
 visible at the default `0.75` threshold.
@@ -68,7 +75,7 @@ python main.py search "distributed systems" --directory "C:\path\to\your\vault"
 On Windows, `setup_and_run.ps1` bootstraps a project-local Python runtime,
 installs dependencies, and builds the demo. To create a map for any folder,
 run `run_graph.bat` from that folder; it scans recursively and writes
-`index.html` into the same folder. You can also pass the folder path directly:
+`graph.html` into the same folder. You can also pass the folder path directly:
 
 ```powershell
 .\setup_and_run.ps1

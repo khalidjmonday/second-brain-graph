@@ -33,7 +33,7 @@ def _parser() -> argparse.ArgumentParser:
         "build", help="embed, cluster, and render Markdown notes"
     )
     build.add_argument("directory", nargs="?", type=Path, default=Path.cwd())
-    build.add_argument("--output", type=Path, default=Path("index.html"))
+    build.add_argument("--output", type=Path, default=Path("graph.html"))
     build.add_argument("--json-output", type=Path)
     build.add_argument("--similarity-threshold", type=float, default=0.75, metavar="0..1")
     build.add_argument("--cache", type=Path)

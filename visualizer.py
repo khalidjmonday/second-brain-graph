@@ -377,7 +377,7 @@ INTERACTION_SCRIPT = r"""
 
 def export_graph(
     graph: nx.DiGraph,
-    output_path: Path = Path("index.html"),
+    output_path: Path = Path("graph.html"),
     background_path: Path | None = None,
 ) -> Path:
     """Write an interactive visualization to ``output_path``.

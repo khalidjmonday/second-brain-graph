@@ -9,7 +9,7 @@ performed. Run from PowerShell with:
 [CmdletBinding()]
 param(
     [string]$VaultPath = (Join-Path $PSScriptRoot 'demo_notes'),
-    [string]$OutputPath = (Join-Path $PSScriptRoot 'index.html')
+    [string]$OutputPath = (Join-Path $PSScriptRoot 'graph.html')
 )
 
 $ErrorActionPreference = 'Stop'
