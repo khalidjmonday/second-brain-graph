@@ -1,4 +1,4 @@
-export const COLORS = ["#7799c2", "#b77a78", "#367a5b", "#8581a2"];
+export const COLORS = ["#477dbb", "#2f5f96", "#7096c0", "#899db3"];
 
 export const DEMO_NOTES = [
   { id: "Home.md", title: "Home.md", folder: "notes", cluster: "Core ideas", color: COLORS[0], text: "A working index for the knowledge base. Start here to explore the main topics, current questions, and active projects.", links: ["Projects.md", "Data Structures.md", "Machine Learning.md"] },

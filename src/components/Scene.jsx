@@ -53,7 +53,7 @@ function Graph({ notes, selected, onSelect, spring, repulsion, showSemantic }) {
     if (target !== undefined && target > index) edges.push([index, target, true]);
   }));
   return <>
-    {edges.map(([from, to, semantic], index) => <Line key={`${from}-${to}-${index}`} points={[positions[from], positions[to]]} color={semantic ? "#79927f" : "#6689b4"} transparent opacity={semantic ? 0.38 : 0.64} lineWidth={semantic ? 0.9 : 1.05} dashed={semantic} dashSize={0.12} gapSize={0.1} />)}
+    {edges.map(([from, to, semantic], index) => <Line key={`${from}-${to}-${index}`} points={[positions[from], positions[to]]} color={semantic ? "#8aa6c5" : "#477dbb"} transparent opacity={semantic ? 0.52 : 0.76} lineWidth={semantic ? 0.9 : 1.05} dashed={semantic} dashSize={0.12} gapSize={0.1} />)}
     {notes.map((note, index) => <Sphere key={note.id} note={note} position={positions[index]} active={selected?.id === note.id} onSelect={onSelect} />)}
   </>;
 }
@@ -75,10 +75,10 @@ function FpsCounter({ onFps }) {
 
 export default function Scene({ notes, selected, onSelect, spring, repulsion, showSemantic, controlsRef, onFps }) {
   return <Canvas camera={{ position: [11, 10, 13], fov: 39 }} dpr={[1, 1.75]} gl={{ antialias: true, preserveDrawingBuffer: true }} onPointerMissed={() => onSelect(null)}>
-    <color attach="background" args={["#0d1518"]} />
-    <ambientLight intensity={0.8} /><directionalLight position={[5, 8, 5]} intensity={1.15} />
+    <color attach="background" args={["#f6f9fd"]} />
+    <ambientLight intensity={1.05} /><directionalLight position={[5, 8, 5]} intensity={1.15} />
     <FpsCounter onFps={onFps} />
-    <gridHelper args={[50, 50, "#1b2a40", "#141e2f"]} position={[0, -4, 0]} />
+    <gridHelper args={[50, 50, "#d6e1ef", "#eaf0f7"]} position={[0, -4, 0]} />
     <Graph notes={notes} selected={selected} onSelect={onSelect} spring={spring} repulsion={repulsion} showSemantic={showSemantic} />
     <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.08} minDistance={5} maxDistance={38} />
   </Canvas>;
